@@ -40,6 +40,8 @@ class ImuPublisherNode(Node):
                     linear_acceleration_y = linear_acceleration[1]
                     linear_acceleration_z = linear_acceleration[2]
 
+                heading,pitch,roll = sensor.euler
+
                 # Publish data
                 imu_msg = Imu()
                 imu_msg.orientation.x = orientation_x
@@ -55,6 +57,10 @@ class ImuPublisherNode(Node):
                 imu_msg.linear_acceleration.y = linear_acceleration_y
                 imu_msg.linear_acceleration.z = linear_acceleration_z
 
+                # Add pitch and roll to the message
+                imu_msg.orientation_covariance[0] = pitch
+                imu_msg.orientation_covariance[1] = roll
+
                 # Set timestamp in the Header
                 header = Header()
                 header.stamp = self.get_clock().now().to_msg()
@@ -63,21 +69,21 @@ class ImuPublisherNode(Node):
                 self.imu_publisher.publish(imu_msg)
 
                 # Print in the terminal in the same format
-                self.get_logger().info(f"\n\
-                    Header:{i}\n\
-                    Orientation:\n\
-                        x: {orientation_x}\n\
-                        y: {orientation_y}\n\
-                        z: {orientation_z}\n\
-                        w: {orientation_w}\n\
-                    Angular Velocity:\n\
-                        x: {angular_velocity_x}\n\
-                        y: {angular_velocity_y}\n\
-                        z: {angular_velocity_z}\n\
-                    Linear Acceleration:\n\
-                        x: {linear_acceleration_x}\n\
-                        y: {linear_acceleration_y}\n\
-                        z: {linear_acceleration_z}\n")
+                # self.get_logger().info(f"\n\
+                #     Header:{i}\n\
+                #     Orientation:\n\
+                #         x: {orientation_x}\n\
+                #         y: {orientation_y}\n\
+                #         z: {orientation_z}\n\
+                #         w: {orientation_w}\n\
+                #     Angular Velocity:\n\
+                #         x: {angular_velocity_x}\n\
+                #         y: {angular_velocity_y}\n\
+                #         z: {angular_velocity_z}\n\
+                #     Linear Acceleration:\n\
+                #         x: {linear_acceleration_x}\n\
+                #         y: {linear_acceleration_y}\n\
+                #         z: {linear_acceleration_z}\n")
 
                 i += 1
                 time.sleep(0.1)
