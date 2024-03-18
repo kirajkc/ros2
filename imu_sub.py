@@ -30,8 +30,12 @@ class ImuSubscriberNode(Node):
             Linear Acceleration:\n\
                 x: {msg.linear_acceleration.x}\n\
                 y: {msg.linear_acceleration.y}\n\
-                z: {msg.linear_acceleration.z}\n"
+                z: {msg.linear_acceleration.z}\n\
+            roll pitch: \n\
+                roll_X: {msg.orientation_covariance[1]}\n\
+                pitch_Y: {msg.orientation_covariance[0]}\n"
         )
+        
 
 def main():
     rclpy.init()
