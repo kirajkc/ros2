@@ -15,7 +15,7 @@ class TrafficSubscriber(Node):
     def __init__(self):
         super().__init__("traffic_subscriber_node")
         self.ir_sub = self.create_subscription(String, '/traffic_light_topic', self.traffic_callback, 10)
-        self.ser = serial.Serial('/dev/ttyACM0', 9600)
+        self.ser = serial.Serial('/dev/ttyACM1', 9600)
         self.last_traffic_state = None
         self.last_serial_data = None
         self.c_r = 0
@@ -29,7 +29,7 @@ class TrafficSubscriber(Node):
         self.start_serial_reading_thread()
 
     def traffic_callback(self, msg: String):
-        self.get_logger().info("Received traffic state: %s" % msg.data)
+        # self.get_logger().info("Received traffic state: %s" % msg.data)
         self.last_traffic_state = msg.data
         self.check_and_move_servo()
 
