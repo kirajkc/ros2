@@ -1,6 +1,4 @@
 #!/usr/bin/env python3
-
-import serial
 import threading
 import rclpy
 from rclpy.node import Node
@@ -10,66 +8,72 @@ import time
 from gpiozero import AngularServo
 from time import sleep
 
+# Pin numbers for your LEDs
+led_pins = [23, 27, 22]
+
 class TrafficSubscriber(Node):
 
     def __init__(self):
         super().__init__("traffic_subscriber_node")
         self.ir_sub = self.create_subscription(String, '/traffic_light_topic', self.traffic_callback, 10)
-        self.ser = serial.Serial('/dev/ttyACM1', 9600)
         self.last_traffic_state = None
-        self.last_serial_data = None
+        self.light_on = None
         self.c_r = 0
         self.c_y = 0
         self.c_g = 0
-
+        GPIO.setmode(GPIO.BCM)
+        for pin in led_pins:
+            GPIO.setup(pin, GPIO.OUT)
         # Setup GPIO
-        self.servo = AngularServo(17, min_pulse_width=0.0006, max_pulse_width=0.0023)
-
-        # Start serial reading thread
-        self.start_serial_reading_thread()
+        self.servo = AngularServo(18, min_pulse_width=0.0006, max_pulse_width=0.0025)
+        self.move_servo(-10)
+        # Start thread
+        threading.Thread(target=self.traffic_lights, daemon=True).start()
 
     def traffic_callback(self, msg: String):
-        # self.get_logger().info("Received traffic state: %s" % msg.data)
+        self.get_logger().info("Received traffic state: %s" % msg.data)
         self.last_traffic_state = msg.data
         self.check_and_move_servo()
 
     def check_and_move_servo(self):
-        if self.last_traffic_state is not None and self.last_serial_data is not None:
-            if self.last_traffic_state == self.last_serial_data:
-                if self.last_traffic_state == 'red':
-                    self.c_r = self.c_r + 1
-                    self.c_y = 0
-                    self.c_g = 0
-                    if self.c_r == 1:
-                        self.move_servo(90)
-                elif self.last_traffic_state == 'yellow':
-                    self.c_y = self.c_y + 1
-                    self.c_r = 0
+        if self.last_traffic_state is not None and self.light_on is not None:
+            if self.last_traffic_state == self.light_on:
+                if self.last_traffic_state == 'yellow':
+                    self.c_y += 1
                     self.c_g = 0
                     if self.c_y == 1: 
-                        self.move_servo(45)
+                        self.move_servo(-40)
                 elif self.last_traffic_state == 'green':
-                    self.c_g = self.c_g + 1
-                    self.c_r = 0
+                    self.c_g += 1
                     self.c_y = 0
-                    if self.c_g == 1:   
-                        self.move_servo(0)
+                    if self.c_g == 1:
+                        self.move_servo(-90)
+                        time.sleep(40)
+                        self.move_servo(-10)
 
     def move_servo(self, angle):
         self.get_logger().info("Servo state: %d" % angle)
-    
         self.servo.angle = angle
         sleep(2)
         self.servo.detach()
 
-    def start_serial_reading_thread(self):
-        threading.Thread(target=self.serial_reading_thread, daemon=True).start()
-
-    def serial_reading_thread(self):
+    def traffic_lights(self):
         while True:
-            read_serial = self.ser.readline().decode('utf-8').rstrip()
-            self.get_logger().info("Received from serial: %s" % read_serial)
-            self.last_serial_data = read_serial
+            # Turn on LEDs in alternate order
+            GPIO.output(led_pins[0], GPIO.HIGH)
+            self.light_on = 'red'
+            time.sleep(10)
+            GPIO.output(led_pins[0], GPIO.LOW)
+
+            GPIO.output(led_pins[1], GPIO.HIGH)
+            self.light_on = 'yellow'
+            time.sleep(10)
+            GPIO.output(led_pins[1], GPIO.LOW)
+
+            GPIO.output(led_pins[2], GPIO.HIGH)
+            self.light_on = 'green'
+            time.sleep(10)
+            GPIO.output(led_pins[2], GPIO.LOW)
 
 def main(args=None):
     rclpy.init(args=args)
